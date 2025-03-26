@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace ELBF20250326.AppWebMVC.Controllers
 {
-    //[Authorize(Roles = "GERENTE")]
+    [Authorize(Roles = "GERENTE")]
     public class WarehouseController : Controller
     {
         private readonly Test20250326DbContext _context;

@@ -15,6 +15,8 @@ using System.Security.Claims;
 
 namespace ELBF20250326.AppWebMVC.Controllers
 {
+    [Authorize(Roles = "ADMINISTRADOR")]
+
     public class UsersController : Controller
     {
         private readonly Test20250326DbContext _context;
