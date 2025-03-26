@@ -6,6 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ELBF20250326.AppWebMVC.Models;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace ELBF20250326.AppWebMVC.Controllers
 {
@@ -19,9 +25,16 @@ namespace ELBF20250326.AppWebMVC.Controllers
         }
 
         // GET: Users
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string searchUserName)
         {
-            return View(await _context.Users.ToListAsync());
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchUserName))
+            {
+                query = query.Where(u => u.Username.Contains(searchUserName));
+            }
+
+            return View(await query.ToListAsync());
         }
 
         // GET: Users/Details/5
@@ -57,6 +70,7 @@ namespace ELBF20250326.AppWebMVC.Controllers
         {
             if (ModelState.IsValid)
             {
+                user.Password = CalcularHashMD5(user.Password);
                 _context.Add(user);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
@@ -64,6 +78,67 @@ namespace ELBF20250326.AppWebMVC.Controllers
             return View(user);
         }
 
+        private string CalcularHashMD5(string password)
+        {
+            using (MD5 md5 = MD5.Create())
+            {
+                byte[] inputBytes = Encoding.UTF8.GetBytes(password);
+                byte[] hashBytes = md5.ComputeHash(inputBytes);
+
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < hashBytes.Length; i++)
+                {
+                    sb.Append(hashBytes[i].ToString("x2"));
+                }
+                return sb.ToString();
+            }
+        }
+
+        [AllowAnonymous]
+        public async Task<IActionResult> CerrarSession()
+        {
+            // Hola mundo
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction("Index", "Home");
+        }
+
+        [AllowAnonymous]
+        public IActionResult Login()
+        {
+            return View();
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> Login(User user)
+        {
+            user.Password = CalcularHashMD5(user.Password);
+            var usuarioAuth = await _context.
+                Users.
+                FirstOrDefaultAsync(s => s.Email == user.Email && s.Password == user.Password);
+            if (usuarioAuth != null && usuarioAuth.Id > 0 && usuarioAuth.Email == user.Email)
+            {
+
+                _context.Users.Update(usuarioAuth);
+                await _context.SaveChangesAsync();
+
+                var claims = new[] {
+                    new Claim(ClaimTypes.Name, usuarioAuth.Email),
+                    new Claim("Id", usuarioAuth.Id.ToString()),
+                    new Claim("Nombre", usuarioAuth.Username),
+                    new Claim(ClaimTypes.Role, usuarioAuth.Role),
+
+                    };
+                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+                return RedirectToAction("Index", "Home");
+            }
+            else
+            {
+                ModelState.AddModelError("", "El email o contraseña estan incorrectos");
+                return View();
+            }
+        }
         // GET: Users/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
@@ -91,28 +166,29 @@ namespace ELBF20250326.AppWebMVC.Controllers
             {
                 return NotFound();
             }
+            var userUpdate = await _context.Users
+            .FirstOrDefaultAsync(m => m.Id == user.Id);
 
-            if (ModelState.IsValid)
+            try
             {
-                try
-                {
-                    _context.Update(user);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!UserExists(user.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                userUpdate.Username = user.Username;
+                userUpdate.Email = user.Email;
+                userUpdate.Role = user.Role;
+                _context.Update(userUpdate);
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(user);
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!UserExists(user.Id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    return View(user);
+                }
+            }
         }
 
         // GET: Users/Delete/5
