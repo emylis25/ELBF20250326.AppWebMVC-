@@ -22,30 +22,18 @@ namespace ELBF20250326.AppWebMVC.Controllers
         }
 
         // GET: Warehouse
-        public async Task<IActionResult> Index(int? searchWarehouseId, int? page, int topRegistro = 10)
+        public async Task<IActionResult> Index(Warehouse bodega, int topRegistro = 10)
         {
-            var warehouses = await _context.Warehouses
-                .Select(w => new { w.Id, w.WarehouseName })
-                .ToListAsync();
-
-            ViewBag.WarehouseList = new SelectList(warehouses, "Id", "WarehouseName");
-
             var query = _context.Warehouses.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(bodega.WarehouseName))
+                query = query.Where(s => s.WarehouseName.Contains(bodega.WarehouseName));
+            if (topRegistro > 0)
+                query = query.Take(topRegistro);
 
-            if (searchWarehouseId.HasValue && searchWarehouseId > 0)
-            {
-                query = query.Where(w => w.Id == searchWarehouseId.Value);
-            }
+            var bodegas = _context.Warehouses.ToList();
+            ViewData["BodegaId"] = new SelectList(bodegas, "Id", "WarehouseName", 0);
+            return View(await query.ToListAsync());
 
-            ViewBag.SearchWarehouseId = searchWarehouseId;
-            ViewBag.TopRegistro = topRegistro;
-
-            int pageNumber = page ?? 1;
-
-            var warehouseList = await query.ToListAsync();
-            var paginatedList = warehouseList.ToPagedList(pageNumber, topRegistro);
-
-            return View(paginatedList);
         }
 
         // GET: Warehouse/Details/5
