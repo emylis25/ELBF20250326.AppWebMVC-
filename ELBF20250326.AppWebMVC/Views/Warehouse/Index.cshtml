@@ -1,20 +1,51 @@
-﻿@model IEnumerable<ELBF20250326.AppWebMVC.Models.Warehouse>
+﻿@model X.PagedList.IPagedList<ELBF20250326.AppWebMVC.Models.Warehouse>
+@using X.PagedList.Mvc.Core
 
 @{
     ViewData["Title"] = "Index";
 }
 
-<h1>Index</h1>
+<h1>Registro de Bodega.</h1>
+<form asp-action="Index" method="get" class="mb-3">
+    <div class="d-flex align-items-end gap-2">
+        <div>
+            <label class="control-label">Selecciona la Bodega a Buscar</label>
+            <select name="searchWarehouseId" class="form-control" asp-items="ViewBag.WarehouseList">
+                <option value="">-- Seleccionar Bodega --</option>
+            </select>
+        </div>
+        <hr />
+        <hr />
+        <hr />
+
+        <div>
+            <label class="control-label">Cant. Registros</label>
+            <select name="topRegistro" class="form-control">
+                <option selected value="10">10</option>
+                <option value="20">20</option>
+                <option value="60">60</option>
+                <option value="100">100</option>
+                <option value="500">500</option>
+                <option value="1000">1000</option>
+                <option value="0">Todos</option>
+            </select>
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-primary">Buscar</button>
+        </div>
+    </div>
+
+</form>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" class="btn btn-success">Crear Nueva Bodega</a>
 </p>
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.WarehouseName)
-            </th>
+            <th>@Html.DisplayNameFor(model => model.First().WarehouseName)</th>        
             <th></th>
         </tr>
     </thead>
@@ -25,11 +56,31 @@
                 @Html.DisplayFor(modelItem => item.WarehouseName)
             </td>
             <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Editar</a>
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Detalles</a>
+                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm">Eliminar</a>
             </td>
         </tr>
 }
     </tbody>
 </table>
+<div class="d-flex justify-content-center">
+    @Html.PagedListPager(Model, page => Url.Action("Index", new
+        {
+            page,
+            searchWarehouseId = ViewBag.SearchWarehouseId,
+            topRegistro = ViewBag.TopRegistro
+        }),
+            new PagedListRenderOptions
+    {
+        DisplayLinkToFirstPage = PagedListDisplayMode.Always,
+        DisplayLinkToLastPage = PagedListDisplayMode.Always,
+        DisplayLinkToPreviousPage = PagedListDisplayMode.Always,
+        DisplayLinkToNextPage = PagedListDisplayMode.Always,
+        MaximumPageNumbersToDisplay = 5,
+        ContainerDivClasses = new[] { "pagination" },
+        LiElementClasses = new[] { "page-item" },
+        PageClasses = new[] { "page-link" }
+    })
+</div>
+
